@@ -134,12 +134,58 @@ def get_lines(x, y, char, board, dx, dy, board_size):
             kind -= 1
         if not fin:
             kind -= 1
-        dic = {"size":size, "dir":(dx,dy), "f": (xl, yl), "l": (xl, yl), "kind": kind, "ini":ini, "fin":fin}
+        dic = {"size":size, "dir":(dx,dy), "f": (xf, yf), "l": (xl, yl), "kind": kind, "ini":ini, "fin":fin}
         # append dic na lista
         lines.append(dic)
         x = xl + dx
         y = yl + dy
     return lines
+
+def scan(char, board, board_size):
+    all_lines = []
+    # vertical scan
+    dx = 0
+    dy = 1
+    for x in range(0,board_size):
+        line = get_lines(x, 0, char, board, dx, dy, board_size) 
+        if line:
+            all_lines += line
+    # horizontal scan
+    dx = 1
+    dy = 0
+    for y in range(0,board_size):
+        line = get_lines(0, y, char, board, dx, dy, board_size) 
+        if line:
+            all_lines += line
+    # diagonal up scan
+    dx = 1
+    dy = -1
+    for y in range(0, board_size):
+        line = get_lines(0, y, char, board, dx, dy, board_size) 
+        if line:
+            all_lines += line
+    for x in range(1, board_size):
+        line = get_lines(x, board_size - 1, char, board, dx, dy, board_size) 
+        if line:
+            all_lines += line
+    # diagonal down scan
+    dx = 1
+    dy = 1
+    for y in range(0, board_size):
+        line = get_lines(0, y, char, board, dx, dy, board_size) 
+        if line:
+            all_lines += line
+    for x in range(1, board_size):
+        line = get_lines(x, 0, char, board, dx, dy, board_size) 
+        if line:
+            all_lines += line
+
+    return all_lines
+
+def save_list(file_name, list_to_save):
+    with open(file_name, 'w') as file:
+        for item in list_to_save:
+            file.write(f"{item}\n")
 
 def main():
     # INITIALIZE
@@ -153,10 +199,13 @@ def main():
     draw_gomoku_board(board_size, black_pieces, white_pieces, board, highlight_coord)
 
     # GAME LOOP
+    old = []
+    all_lines = []
     turn_is = 'BLACK'
     while (True):
         # UPDATE MOVE
         coords = input(f'\n{turn_is} input move [x y]: ')
+        old = all_lines;
         x, y = map(int, coords.split())
         if (is_valid(x,y, board_size) and is_empty(x,y, white_pieces, black_pieces)):
             print("Valid move !")
@@ -167,15 +216,13 @@ def main():
 
         #DRAW BOARD
         draw_gomoku_board(board_size, black_pieces, white_pieces, board, (x,y))
-
-        #PRINT PIECES
-        #print("B: ",black_pieces)
-        #print("W: ",white_pieces)
-        print('na vertical')
-        #get_lines(8, 0, '@', board, 0, 1, board_size)
-        lines = get_lines(9, 0, '@', board, 0, 1, board_size)
-        for line in lines:
+        
+        all_lines = scan('@',board, board_size)
+        for line in all_lines:
             print(line)
+        save_list('old', old)
+        save_list('new', all_lines)
+
 
 
 
