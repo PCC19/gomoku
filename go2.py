@@ -47,10 +47,14 @@ def draw_gomoku_board(board_size, black_pieces, white_pieces, board, highlight_c
             row_str += cell + '  '
         print(row_str.rstrip())
 
-def is_valid (x, y, white_pieces, black_pieces, board_size):
-    if (x in range(0, board_size + 1)) and (y in range(0, board_size + 1)):
-        if ((x,y) not in black_pieces and (x,y) not in white_pieces):
-            return True
+def is_valid (x, y, board_size):
+    if (x in range(0, board_size)) and (y in range(0, board_size)):
+        return True
+    return False
+
+def is_empty (x, y, white_pieces, black_pieces):
+    if ((x,y) not in black_pieces and (x,y) not in white_pieces):
+        return True
     return False
 
 def update_board(x, y, color, white_pieces, black_pieces, board):
@@ -75,72 +79,67 @@ def get_bounds(coord_list):
     xs, ys = zip(*coord_list)
     return min(xs), max(xs), min(ys), max(ys)
 
-#def get_lines(white_pieces, black_pieces, board_size):
-#    # SCAN BLACK @
-#    color = '@'
-#    min_x, max_x, min_y, max_y = get_bounds(black_pieces)
-#    for x in range(min_x, max_x + 1):
-#        for y in range(min_y, max_y + 1):
-
-def go_first(x, y, char, board, dx, dy, max_x, max_y):
-    while (board[x][y] != char and x <= max_x and y <= max_y):
+def go_first(x, y, char, board, dx, dy, board_size):
+    while (is_valid(x, y, board_size)):
+        if (board[x][y] == char):
+            return x, y
         x += dx
         y += dy
-    if (board[x][y] != char):
-        x = None
-        y = None
-    return x,y
+    return None, None
 
-def go_last(x, y, char, board, dx, dy, max_x, max_y):
-    while (board[x][y] == char and x <= max_x and y <= max_y):
+def go_last(x, y, char, board, dx, dy, board_size):
+    while (board[x][y] == char):
         x += dx
         y += dy
+        if (not is_valid(x, y, board_size)):
+            return x - dx, y - dy
     return x - dx, y - dy
 
-def get_ini(x,y, dx, dy, board):
+def get_ini(x, y, dx, dy, board, board_size):
+    ini = ()
+    if (not is_valid(x,y, board_size)):
+        return ini
     x_ini = x - dx
     y_ini = y - dy
-    if (x_ini >= 0 and y_ini >= 0 and board[x_ini][y_ini] == '.'):
+    if (is_valid(x_ini, y_ini, board_size) and board[x_ini][y_ini] == '.'):
         ini = (x_ini, y_ini)
-    else:
-        ini = ()
     return ini
 
 def get_fin(x,y, dx, dy, board, board_size):
+    fin = ()
     x_fin = x + dx
     y_fin = y + dy
-    if (x_fin <= board_size and y_fin <= board_size and board[x_fin][y_fin] == '.'):
+    if (is_valid(x_fin, y_fin, board_size) and board[x_fin][y_fin] == '.'):
         fin = (x_fin, y_fin)
-    else:
-        fin = ()
     return fin
 
-def get_lines(x, y, char, board, dx, dy, max_x, max_y, board_size):
-# faz loop a partir do ponto de partida ate final do bound ou board
-    # vai ate primeria peca
-    xf, yf = go_first(x,y,char, board, dx, dy, max_x, max_y)
-    # pega coordenada da antecessora se tiver
-    ini = get_ini(xf, yf, dx, dy, board)
-    # vai ate ultima peca
-    xl, yl = go_last(xf, yf, char, board, dx, dy, max_x, max_y)
-    # calcula tamanho
-    size = max(xl - xf, yl - yf) + 1
-    # pega coordenada da sucessora se houver
-    fin = get_fin(xl, yl, dx, dy, board, board_size)
-    kind = 2;
-    if not ini:
-        kind -= 1
-    if not fin:
-        kind -= 1
-    dic = {"size":size, "dir":(dx,dy), "kind": kind, "ini":ini, "fin":fin}
-    print(dic)
-    return dic
-
-
-        # monta dic com tamanho, dir, tipo, ini, fin
-    # append dic na lista
-
-
+def get_lines(x, y, char, board, dx, dy, board_size):
+    # faz loop a partir do ponto de partida ate final do bound ou board
+    lines = []
+    while(is_valid(x, y, board_size)):
+        # vai ate primeria peca
+        xf, yf = go_first(x,y,char, board, dx, dy, board_size)
+        if (not is_valid(xf, yf, board_size)):
+            return lines
+        # pega coordenada da antecessora se tiver
+        ini = get_ini(xf, yf, dx, dy, board, board_size)
+        # vai ate ultima peca
+        xl, yl = go_last(xf, yf, char, board, dx, dy, board_size)
+        # calcula tamanho
+        size = max(xl - xf, yl - yf) + 1
+        # pega coordenada da sucessora se houver
+        fin = get_fin(xl, yl, dx, dy, board, board_size)
+        kind = 2;
+        if not ini:
+            kind -= 1
+        if not fin:
+            kind -= 1
+        dic = {"size":size, "dir":(dx,dy), "f": (xl, yl), "l": (xl, yl), "kind": kind, "ini":ini, "fin":fin}
+        # append dic na lista
+        lines.append(dic)
+        x = xl + dx
+        y = yl + dy
+    return lines
 
 def main():
     # INITIALIZE
@@ -159,7 +158,7 @@ def main():
         # UPDATE MOVE
         coords = input(f'\n{turn_is} input move [x y]: ')
         x, y = map(int, coords.split())
-        if (is_valid(x,y, white_pieces, black_pieces, board_size)):
+        if (is_valid(x,y, board_size) and is_empty(x,y, white_pieces, black_pieces)):
             print("Valid move !")
             white_pieces, black_pieces, board = update_board(x, y, turn_is, white_pieces, black_pieces, board)
             turn_is = toggle_turn(turn_is)
@@ -170,17 +169,13 @@ def main():
         draw_gomoku_board(board_size, black_pieces, white_pieces, board, (x,y))
 
         #PRINT PIECES
-        print("B: ",black_pieces)
-        print("W: ",white_pieces)
-        print(get_bounds(black_pieces + white_pieces))
-        print(get_bounds(black_pieces))
-        print(get_bounds(white_pieces))
-        a, b = go_first(6, 0, '@', board, 0, 1, 10, 10)
-        print(a,b)
-        ini = get_ini(a, b, 0, 1, board)
-        print(ini)
-        print('last')
-        get_lines(6, 0, '@', board, 0, 1, 10, 10, board_size)
+        #print("B: ",black_pieces)
+        #print("W: ",white_pieces)
+        print('na vertical')
+        #get_lines(8, 0, '@', board, 0, 1, board_size)
+        lines = get_lines(9, 0, '@', board, 0, 1, board_size)
+        for line in lines:
+            print(line)
 
 
 
