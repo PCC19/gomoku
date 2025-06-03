@@ -1,3 +1,5 @@
+import copy
+
 def read_gomoku_board(file_path, board):
     black_pieces = []
     white_pieces = []
@@ -171,7 +173,7 @@ def update_state(x, y, turn_is, board, board_size):
     lines = black_lines + white_lines
     return board, lines
 
-def check_capture(x, y, turn_is, board, lines, score):
+def capture(x, y, turn_is, board, lines, score):
     if turn_is == 'BLACK':
         p = 'O'
     else:
@@ -182,29 +184,33 @@ def check_capture(x, y, turn_is, board, lines, score):
         print(line)
     if duplas:
         for line in duplas:
-            board = remove_piece(line['f'], board)
-            board = remove_piece(line['l'], board)
+            remove_piece(line['f'], board)
+            remove_piece(line['l'], board)
             score[turn_is] += 2
     return board, score
 
 def remove_piece(piece, board):
     x, y = piece
     board[x][y] = '.'
-    return board
-
 
 def check_free3(x, y, turn_is, board, board_size):
     count = 0
-    print("1:", board[12][14])
-    _ , lines =  update_state(x, y, turn_is, board, board_size)
-    print("2:", board[12][14])
-    # CASE 3
-    case3 = [line for line in lines if line['size'] == 3 and line['kind'] == 2 and (line['f'] == (x,y) or line['l'] == (x,y))]
+    _ , lines =  update_state(x, y, turn_is, copy.deepcopy(board), board_size)
+    # CASE 3 ========================================================================
+    case3 = []
+    # Find lines with size 3
+    temp = [line for line in lines if line['size'] == 3 and line['kind'] == 2]
+    for linha in temp:
+        x1, y1 = linha['f']
+        x2, y2 = linha['l']
+        # Check if x,y belongs to the line
+        if x >= x1 and x<= x2 and y >= y1 and y <= y2:
+            case3.append(linha)
     count += len(case3)
     print("case3:", count)
     for linha in case3:
         print(linha)
-    # CASE 1
+    # CASE 1 ========================================================================
     case1 = []
     # find lines size = 1 and kind = 2 containing the piece x,y
     temp = [line for line in lines if line['f'] == (x,y) and line['kind'] == 2 and line['size'] == 1]
@@ -223,7 +229,7 @@ def check_free3(x, y, turn_is, board, board_size):
     print("case1:", count)
     for linha in case1:
         print(linha)
-    # CASE 2
+    # CASE 2 ========================================================================
     case2 = []
     # find lines size = 2 and kind = 2 containing the piece x,y
     temp = [line for line in lines if line['size'] == 2 and line['kind'] == 2 and (line['f'] == (x,y) or line['l'] == (x,y))]
@@ -254,8 +260,6 @@ def main():
     # INITIALIZE
     board_size = 19
     board = [['.' for _ in range(board_size)] for _ in range(board_size)]
-    #black_pieces = [(7, 7), (8, 7), (9, 7)]
-    #white_pieces = [(7, 8), (8, 8), (9, 8)]
     highlight_coord = (8, 7)  # This cell will be printed in red
     board_file = "board3"
     board = read_gomoku_board(board_file, board)
@@ -272,31 +276,25 @@ def main():
         coords = input(f'\n{turn_is} input move [x y]: ')
         old = lines;
         x, y = map(int, coords.split())
-        print(board[12][14])
-        if (is_valid(x,y, board_size) and is_empty(x,y, board) and check_free3(x, y, turn_is, board, board_size)):
-        #if (is_valid(x,y, board_size) and is_empty(x,y, board)): 
+        if (is_valid(x,y, board_size) and is_empty(x,y, board) and check_free3(x, y, turn_is, copy.deepcopy(board), board_size)):
             # CHECK 2 free-three
             print("Valid move !")
             # CHECK CAPTURE
-            board, score =  check_capture(x, y, turn_is, board, lines, score)
+            board, score = capture(x, y, turn_is, copy.deepcopy(board), lines, score)
             # UPDATE STATE
             board, lines =  update_state(x, y, turn_is, board, board_size)
             turn_is = toggle_turn(turn_is)
         else:
             print("Invalid move !")
 
-        print(board[12][14])
-
         #DRAW BOARD
         draw_gomoku_board(board_size, board, (x,y))
+        print("Score", score)
         
 #        for line in lines:
 #            print(line)
         save_list('old', old)
         save_list('new', lines)
-
-        print("Score", score)
-        
 
 if __name__ == "__main__":
     main()
