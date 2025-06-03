@@ -7,14 +7,14 @@ def read_gomoku_board(file_path, board):
         for row_index, line in enumerate(file):
             for col_index, char in enumerate(line.strip()):
                 if char == '@':
-                    black_pieces.append((col_index, row_index))
+#                    black_pieces.append((col_index, row_index))
                     board[col_index][row_index] = '@'
                 elif char == 'O':
-                    white_pieces.append((col_index, row_index))
+#                    white_pieces.append((col_index, row_index))
                     board[col_index][row_index] = 'O'
-    return black_pieces, white_pieces, board
+    return board
 
-def draw_gomoku_board(board_size, black_pieces, white_pieces, board, highlight_coord=None):
+def draw_gomoku_board(board_size, board, highlight_coord=None):
     RED = '\033[91m'
     RED = '\033[34m'
     RESET = '\033[0m'
@@ -22,19 +22,6 @@ def draw_gomoku_board(board_size, black_pieces, white_pieces, board, highlight_c
     # Prepare labels with 3 digits, starting from 1
     col_labels = [f"{i-1 +1:2}" for i in range(board_size)]
     row_labels = [f"{i-1 +1:2}" for i in range(board_size)]
-
-    # Create an empty board
-    board = [['.' for _ in range(board_size)] for _ in range(board_size)]
-
-    # Place black pieces
-    for x, y in black_pieces:
-        if 0 <= x < board_size and 0 <= y < board_size:
-            board[x][y] = '@'
-
-    # Place white pieces
-    for x, y in white_pieces:
-        if 0 <= x < board_size and 0 <= y < board_size:
-            board[x][y] = 'O'
 
     # Draw the board
     print('  ' + ' '.join(col_labels))
@@ -52,21 +39,17 @@ def is_valid (x, y, board_size):
         return True
     return False
 
-def is_empty (x, y, white_pieces, black_pieces):
-    if ((x,y) not in black_pieces and (x,y) not in white_pieces):
+def is_empty (x, y, board):
+    if board[x][y] == '.':
         return True
     return False
 
-def update_board(x, y, color, white_pieces, black_pieces, board):
+def update_board(x, y, color, board):
     if color == "WHITE":
-        white_pieces.append((x,y))
-        white_pieces.sort()
         board[x][y] = "O"
     if color == "BLACK":
-        black_pieces.append((x,y))
-        black_pieces.sort()
         board[x][y] = "@"
-    return white_pieces, black_pieces, board
+    return board
 
 def toggle_turn(color):
     if color == "WHITE":
@@ -188,12 +171,33 @@ def save_list(file_name, list_to_save):
             file.write(f"{item}\n")
 
 
-def update_state(x, y, turn_is, white_pieces, black_pieces, board, board_size):
-    white_pieces, black_pieces, board = update_board(x, y, turn_is, white_pieces, black_pieces, board)
+def update_state(x, y, turn_is, board, board_size):
+    board = update_board(x, y, turn_is, board)
     black_lines = scan('@', board, board_size)
     white_lines = scan('O', board, board_size)
     lines = black_lines + white_lines
-    return white_pieces, black_pieces, board, lines
+    return board, lines
+
+def check_capture(x, y, turn_is, board, lines, score):
+    if turn_is == 'BLACK':
+        p = 'O'
+    else:
+        p = '@'
+    duplas = [d for d in lines if d['p'] == p and d['size'] == 2 and d['kind'] == 1 and (d['ini'] == (x,y) or d['fin'] == (x,y))]
+    print("duplas:\n")
+    for line in duplas:
+        print(line)
+    if duplas:
+        for line in duplas:
+            board = remove_piece(line['f'], board)
+            board = remove_piece(line['l'], board)
+            score[turn_is] += 2
+    return board, score
+
+def remove_piece(piece, board):
+    x, y = piece
+    board[x][y] = '.'
+    return board
 
 
 def main():
@@ -204,8 +208,9 @@ def main():
     #white_pieces = [(7, 8), (8, 8), (9, 8)]
     highlight_coord = (8, 7)  # This cell will be printed in red
     board_file = "board2"
-    black_pieces, white_pieces, board = read_gomoku_board(board_file, board)
-    draw_gomoku_board(board_size, black_pieces, white_pieces, board, highlight_coord)
+    board = read_gomoku_board(board_file, board)
+    draw_gomoku_board(board_size, board, highlight_coord)
+    score = {"WHITE":0 , "BLACK": 0}
 
     # GAME LOOP
     old = []
@@ -217,30 +222,27 @@ def main():
         coords = input(f'\n{turn_is} input move [x y]: ')
         old = lines;
         x, y = map(int, coords.split())
-        if (is_valid(x,y, board_size) and is_empty(x,y, white_pieces, black_pieces)):
+        if (is_valid(x,y, board_size) and is_empty(x,y, board)):
             print("Valid move !")
             # CHECK CAPTURE
-            duplas = [d for d in lines if d['size'] == 2 and d['kind'] == 1 and (d['ini'] == (x,y) or d['fin'] == (x,y))]
+            board, score =  check_capture(x, y, turn_is, board, lines, score)
             # UPDATE STATE
-            white_pieces, black_pieces, board, lines =  update_state(x, y, turn_is, white_pieces, black_pieces, board, board_size)
+            board, lines =  update_state(x, y, turn_is, board, board_size)
             turn_is = toggle_turn(turn_is)
         else:
             print("Invalid move !")
 
 
         #DRAW BOARD
-        draw_gomoku_board(board_size, black_pieces, white_pieces, board, (x,y))
+        draw_gomoku_board(board_size, board, (x,y))
         
         for line in lines:
             print(line)
         save_list('old', old)
         save_list('new', lines)
+
+        print("Score", score)
         
-        print("duplas:\n")
-        for line in duplas:
-            print(line)
-
-
 
 
 
