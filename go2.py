@@ -1,4 +1,3 @@
-
 def read_gomoku_board(file_path, board):
     black_pieces = []
     white_pieces = []
@@ -7,10 +6,8 @@ def read_gomoku_board(file_path, board):
         for row_index, line in enumerate(file):
             for col_index, char in enumerate(line.strip()):
                 if char == '@':
-#                    black_pieces.append((col_index, row_index))
                     board[col_index][row_index] = '@'
                 elif char == 'O':
-#                    white_pieces.append((col_index, row_index))
                     board[col_index][row_index] = 'O'
     return board
 
@@ -57,10 +54,6 @@ def toggle_turn(color):
     if color == "BLACK":
         return "WHITE"
     return "ERROR"
-
-def get_bounds(coord_list):
-    xs, ys = zip(*coord_list)
-    return min(xs), max(xs), min(ys), max(ys)
 
 def go_first(x, y, char, board, dx, dy, board_size):
     while (is_valid(x, y, board_size)):
@@ -200,6 +193,63 @@ def remove_piece(piece, board):
     return board
 
 
+def check_free3(x, y, turn_is, board, board_size):
+    count = 0
+    print("1:", board[12][14])
+    _ , lines =  update_state(x, y, turn_is, board, board_size)
+    print("2:", board[12][14])
+    # CASE 3
+    case3 = [line for line in lines if line['size'] == 3 and line['kind'] == 2 and (line['f'] == (x,y) or line['l'] == (x,y))]
+    count += len(case3)
+    print("case3:", count)
+    for linha in case3:
+        print(linha)
+    # CASE 1
+    case1 = []
+    # find lines size = 1 and kind = 2 containing the piece x,y
+    temp = [line for line in lines if line['f'] == (x,y) and line['kind'] == 2 and line['size'] == 1]
+    # for each size 1 line find size 2 lines in the same dir and adjacent
+    for linha in temp:
+        d = linha['dir']
+        fin = linha['fin']
+        ini = linha['ini']
+        temp2 = [line for line in lines if (line['ini'] == fin or line['fin'] == ini) and line['dir'] == d and line['size'] == 2]
+        if temp2:
+            case1.append(temp2)
+    count += len(case1)
+    print("temp:", count)
+    for linha in temp:
+        print(linha)
+    print("case1:", count)
+    for linha in case1:
+        print(linha)
+    # CASE 2
+    case2 = []
+    # find lines size = 2 and kind = 2 containing the piece x,y
+    temp = [line for line in lines if line['size'] == 2 and line['kind'] == 2 and (line['f'] == (x,y) or line['l'] == (x,y))]
+    # for each size 2 line find size 1 lines in the same dir and adjacent
+    for linha in temp:
+        d = linha['dir']
+        fin = linha['fin']
+        ini = linha['ini']
+        temp2 = [line for line in lines if (line['ini'] == fin or line['fin'] == ini) and line['dir'] == d and line['size'] == 1]
+        if temp2:
+            case2.append(temp2)
+    count += len(case2)
+    print("temp:", count)
+    for linha in temp:
+        print(linha)
+    print("case2:",count) 
+    for linha in case2:
+        print(linha)
+
+    if count > 1:
+        print("Invalid move: 2 free-3 !")
+        return False
+
+    return True
+
+
 def main():
     # INITIALIZE
     board_size = 19
@@ -207,7 +257,7 @@ def main():
     #black_pieces = [(7, 7), (8, 7), (9, 7)]
     #white_pieces = [(7, 8), (8, 8), (9, 8)]
     highlight_coord = (8, 7)  # This cell will be printed in red
-    board_file = "board2"
+    board_file = "board3"
     board = read_gomoku_board(board_file, board)
     draw_gomoku_board(board_size, board, highlight_coord)
     score = {"WHITE":0 , "BLACK": 0}
@@ -222,7 +272,10 @@ def main():
         coords = input(f'\n{turn_is} input move [x y]: ')
         old = lines;
         x, y = map(int, coords.split())
-        if (is_valid(x,y, board_size) and is_empty(x,y, board)):
+        print(board[12][14])
+        if (is_valid(x,y, board_size) and is_empty(x,y, board) and check_free3(x, y, turn_is, board, board_size)):
+        #if (is_valid(x,y, board_size) and is_empty(x,y, board)): 
+            # CHECK 2 free-three
             print("Valid move !")
             # CHECK CAPTURE
             board, score =  check_capture(x, y, turn_is, board, lines, score)
@@ -232,20 +285,18 @@ def main():
         else:
             print("Invalid move !")
 
+        print(board[12][14])
 
         #DRAW BOARD
         draw_gomoku_board(board_size, board, (x,y))
         
-        for line in lines:
-            print(line)
+#        for line in lines:
+#            print(line)
         save_list('old', old)
         save_list('new', lines)
 
         print("Score", score)
         
-
-
-
 
 if __name__ == "__main__":
     main()
