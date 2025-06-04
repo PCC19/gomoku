@@ -165,7 +165,6 @@ def save_list(file_name, list_to_save):
         for item in list_to_save:
             file.write(f"{item}\n")
 
-
 def update_state(x, y, turn_is, board, board_size):
     board = update_board(x, y, turn_is, board)
     black_lines = scan('@', board, board_size)
@@ -174,19 +173,26 @@ def update_state(x, y, turn_is, board, board_size):
     return board, lines
 
 def capture(x, y, turn_is, board, lines, score):
+    bs = len(board)
     if turn_is == 'BLACK':
         p = 'O'
     else:
         p = '@'
     duplas = [d for d in lines if d['p'] == p and d['size'] == 2 and d['kind'] == 1 and (d['ini'] == (x,y) or d['fin'] == (x,y))]
     print("duplas:\n")
+    # se ini - dir ou final + dir cair pra fora do tabuleiro: nao captura
     for line in duplas:
         print(line)
     if duplas:
         for line in duplas:
-            remove_piece(line['f'], board)
-            remove_piece(line['l'], board)
-            score[turn_is] += 2
+            xf, yf = line['f']
+            xl, yl = line['l']
+            dx, dy = line['dir']
+            #breakpoint()
+            if (is_valid(xf - dx, yf - dy, bs) and is_valid(xl + dx, yl + dy, bs)):
+                remove_piece(line['f'], board)
+                remove_piece(line['l'], board)
+                score[turn_is] += 2
     return board, score
 
 def remove_piece(piece, board):
@@ -271,6 +277,7 @@ def main():
     lines = []
     duplas = []
     turn_is = 'BLACK'
+    print("len: ", len(board))
     while (True):
         # UPDATE MOVE
         coords = input(f'\n{turn_is} input move [x y]: ')
@@ -283,6 +290,8 @@ def main():
             board, score = capture(x, y, turn_is, copy.deepcopy(board), lines, score)
             # UPDATE STATE
             board, lines =  update_state(x, y, turn_is, board, board_size)
+            # CHECK VICTORY
+            # TOGGEL PLAYER
             turn_is = toggle_turn(turn_is)
         else:
             print("Invalid move !")
