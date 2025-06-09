@@ -107,12 +107,18 @@ def get_lines(x, y, char, board, dx, dy, board_size):
         size = max(xl - xf, yl - yf) + 1
         # pega coordenada da sucessora se houver
         fin = get_fin(xl, yl, dx, dy, board, board_size)
+        # Compute how many free spaces are (kund)
         kind = 2;
         if not ini:
             kind -= 1
         if not fin:
             kind -= 1
-        dic = {"p": char, "size":size, "dir":(dx,dy), "f": (xf, yf), "l": (xl, yl), "kind": kind, "ini":ini, "fin":fin}
+        # Check if line is adjacent to wall
+        if (is_valid(xf - dx, yf - dy, board_size) and is_valid(xl + dx, yl + dy, board_size)):
+            w = 0
+        else:
+            w = 1
+        dic = {"p": char, "size":size, "dir":(dx,dy), "f": (xf, yf), "l": (xl, yl), "kind": kind, "w":w, "ini":ini, "fin":fin}
         # append dic na lista
         lines.append(dic)
         x = xl + dx
@@ -178,7 +184,9 @@ def capture(x, y, turn_is, board, lines, score):
         p = 'O'
     else:
         p = '@'
-    duplas = [d for d in lines if d['p'] == p and d['size'] == 2 and d['kind'] == 1 and (d['ini'] == (x,y) or d['fin'] == (x,y))]
+    duplas = [d for d in lines if d['p'] == p and d['size'] == 2 and d['kind'] == 1 and d['w'] == 0 and (d['ini'] == (x,y) or d['fin'] == (x,y))]
+    print("------")
+    print(lines)
     print("duplas:\n")
     # se ini - dir ou final + dir cair pra fora do tabuleiro: nao captura
     for line in duplas:
@@ -189,10 +197,9 @@ def capture(x, y, turn_is, board, lines, score):
             xl, yl = line['l']
             dx, dy = line['dir']
             #breakpoint()
-            if (is_valid(xf - dx, yf - dy, bs) and is_valid(xl + dx, yl + dy, bs)):
-                remove_piece(line['f'], board)
-                remove_piece(line['l'], board)
-                score[turn_is] += 2
+            remove_piece(line['f'], board)
+            remove_piece(line['l'], board)
+            score[turn_is] += 2
     return board, score
 
 def remove_piece(piece, board):
@@ -279,22 +286,25 @@ def main():
     turn_is = 'BLACK'
     print("len: ", len(board))
     while (True):
-        # UPDATE MOVE
+        # INPUT USER MOVE
         coords = input(f'\n{turn_is} input move [x y]: ')
         old = lines;
         x, y = map(int, coords.split())
-        if (is_valid(x,y, board_size) and is_empty(x,y, board) and check_free3(x, y, turn_is, copy.deepcopy(board), board_size)):
-            # CHECK 2 free-three
-            print("Valid move !")
-            # CHECK CAPTURE
-            board, score = capture(x, y, turn_is, copy.deepcopy(board), lines, score)
-            # UPDATE STATE
-            board, lines =  update_state(x, y, turn_is, board, board_size)
-            # CHECK VICTORY
-            # TOGGEL PLAYER
-            turn_is = toggle_turn(turn_is)
-        else:
+        if not (is_valid(x,y, board_size) and is_empty(x,y, board)):
             print("Invalid move !")
+        else:
+            if check_free3(x, y, turn_is, copy.deepcopy(board), board_size):
+                # CHECK 2 free-three
+                print("Valid move !")
+                # CHECK CAPTURE
+                board, score = capture(x, y, turn_is, copy.deepcopy(board), lines, score)
+                # UPDATE STATE
+                board, lines =  update_state(x, y, turn_is, board, board_size)
+                # CHECK VICTORY
+                # TOGGEL PLAYER
+                turn_is = toggle_turn(turn_is)
+            else:
+                print("Invalid move !")
 
         #DRAW BOARD
         draw_gomoku_board(board_size, board, (x,y))
@@ -304,6 +314,8 @@ def main():
 #            print(line)
         save_list('old', old)
         save_list('new', lines)
+
+        # GENERATE AI MOVE
 
 if __name__ == "__main__":
     main()
