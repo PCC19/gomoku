@@ -268,13 +268,42 @@ def check_free3(x, y, turn_is, board, board_size):
 
     return True
 
+def evaluate_line(d):
+    size = d['size']
+    k = d['kind']
+    s = (10 ** (size -1)) * k
+    if d['w'] == 0 and size == 2 and k == 1:
+        s = -250
+    return s
+
+def get_score(lines):
+    p = '@'
+    b_lines = [line for line in lines if line['p'] == p]
+    b_score = [evaluate_line(line) for line in b_lines]
+    black_score = sum(b_score)
+    print('b_score:', black_score)
+    p = 'O'
+    w_lines = [line for line in lines if line['p'] == p]
+    w_score = [evaluate_line(line) for line in w_lines]
+    white_score = sum(w_score)
+    print('w_score:', white_score)
+    return black_score - white_score
+
+def check_winner(lines, score):
+    if (score['WHITE'] >= 10 or len([line for line in lines if line['size'] >= 5 and line['p'] == 'O']) > 0):
+        print("WINNER IS: WHITE !!!")
+        exit()
+    if (score['BLACK'] >= 10 or len([line for line in lines if line['size'] >= 5 and line['p'] == '@']) > 0):
+        print("WINNER IS: BLACK !!!")
+        exit()
+
 
 def main():
     # INITIALIZE
     board_size = 19
     board = [['.' for _ in range(board_size)] for _ in range(board_size)]
     highlight_coord = (8, 7)  # This cell will be printed in red
-    board_file = "board3"
+    board_file = "board0"
     board = read_gomoku_board(board_file, board)
     draw_gomoku_board(board_size, board, highlight_coord)
     score = {"WHITE":0 , "BLACK": 0}
@@ -309,6 +338,9 @@ def main():
         #DRAW BOARD
         draw_gomoku_board(board_size, board, (x,y))
         print("Score", score)
+        #CHECK WINNER
+        check_winner(lines, score)
+
         
 #        for line in lines:
 #            print(line)
@@ -316,6 +348,11 @@ def main():
         save_list('new', lines)
 
         # GENERATE AI MOVE
+        board_score = get_score(lines)
+        print('board_score:', board_score)
+        # CHECK WINNER
+        check_winner(lines, score)
+
 
 if __name__ == "__main__":
     main()
