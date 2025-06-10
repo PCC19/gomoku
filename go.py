@@ -206,66 +206,64 @@ def remove_piece(piece, board):
     x, y = piece
     board[x][y] = '.'
 
-def check_free3(x, y, turn_is, board, board_size):
+def get_word(x, y, dx, dy, p, board, wl, ofs, target):
+    bs = len(board)
+    # Check if ini word is valid
+    if not is_valid(x-ofs*dx, y - ofs*dy, bs):
+        return 0
+    # Check if end world is valid
+    if not is_valid(x - ofs*dx + (wl-1)*dx, y - ofs*dy + (wl-1)*dy, bs):
+        return 0
+    board[x][y] = p
     count = 0
-    _ , lines =  update_state(x, y, turn_is, copy.deepcopy(board), board_size)
-    # CASE 3 ========================================================================
-    case3 = []
-    # Find lines with size 3
-    temp = [line for line in lines if line['size'] == 3 and line['kind'] == 2]
-    for linha in temp:
-        x1, y1 = linha['f']
-        x2, y2 = linha['l']
-        # Check if x,y belongs to the line
-        if x >= x1 and x<= x2 and y >= y1 and y <= y2:
-            case3.append(linha)
-    count += len(case3)
-    print("case3:", count)
-    for linha in case3:
-        print(linha)
-    # CASE 1 ========================================================================
-    case1 = []
-    # find lines size = 1 and kind = 2 containing the piece x,y
-    temp = [line for line in lines if line['f'] == (x,y) and line['kind'] == 2 and line['size'] == 1]
-    # for each size 1 line find size 2 lines in the same dir and adjacent
-    for linha in temp:
-        d = linha['dir']
-        fin = linha['fin']
-        ini = linha['ini']
-        temp2 = [line for line in lines if (line['ini'] == fin or line['fin'] == ini) and line['dir'] == d and line['size'] == 2]
-        if temp2:
-            case1.append(temp2)
-    count += len(case1)
-    print("temp:", count)
-    for linha in temp:
-        print(linha)
-    print("case1:", count)
-    for linha in case1:
-        print(linha)
-    # CASE 2 ========================================================================
-    case2 = []
-    # find lines size = 2 and kind = 2 containing the piece x,y
-    temp = [line for line in lines if line['size'] == 2 and line['kind'] == 2 and (line['f'] == (x,y) or line['l'] == (x,y))]
-    # for each size 2 line find size 1 lines in the same dir and adjacent
-    for linha in temp:
-        d = linha['dir']
-        fin = linha['fin']
-        ini = linha['ini']
-        temp2 = [line for line in lines if (line['ini'] == fin or line['fin'] == ini) and line['dir'] == d and line['size'] == 1]
-        if temp2:
-            case2.append(temp2)
-    count += len(case2)
-    print("temp:", count)
-    for linha in temp:
-        print(linha)
-    print("case2:",count) 
-    for linha in case2:
-        print(linha)
+    cod = 0
+    for i in range(0,wl):
+        xi = x - ofs*dx + i*dx
+        yi = y - ofs*dy + i*dy
+        ch = board[xi][yi]
+        if ch == p:
+            cod += 2 ** i
+        if ch == '.':
+            cod += 0
+        if (ch != p and ch != '.'):
+            cod = 0
+            break
+        print ('dir:', dx, dy, 'xy: ', xi, yi, 'ch:', ch, ' cod:', cod)
+    print("---")
+    if cod in target:
+        count += 1
+    return count
+
+def scan_word(x, y, dx, dy, p, board):
+    count = 0
+    # CASE 1: size3
+    count += get_word(x, y, dx, dy, p, board, 5, 3, [14])
+    count += get_word(x, y, dx, dy, p, board, 5, 2, [14])
+    count += get_word(x, y, dx, dy, p, board, 5, 1, [14])
+    # CASE 2: size2 + size1
+    print('===')
+    count += get_word(x, y, dx, dy, p, board, 6, 4, [22, 26])
+    count += get_word(x, y, dx, dy, p, board, 6, 3, [22, 26])
+    count += get_word(x, y, dx, dy, p, board, 6, 2, [22, 26])
+    count += get_word(x, y, dx, dy, p, board, 6, 1, [22, 26])
+    return count
+
+def check_free3(x, y, turn_is, board):
+    count = 0
+    if turn_is == "WHITE":
+        p = 'O'
+    else:
+        p = '@'
+    # CASE 1
+    count += scan_word(x, y, 0, 1, p, board)
+    count += scan_word(x, y, 1, 0, p, board)
+    count += scan_word(x, y, 1, 1, p, board)
+    count += scan_word(x, y, 1, -1, p, board)
+    print('count:', count)
 
     if count > 1:
         print("Invalid move: 2 free-3 !")
         return False
-
     return True
 
 def evaluate_line(d):
@@ -297,13 +295,12 @@ def check_winner(lines, score):
         print("WINNER IS: BLACK !!!")
         exit()
 
-
 def main():
     # INITIALIZE
     board_size = 19
     board = [['.' for _ in range(board_size)] for _ in range(board_size)]
     highlight_coord = (8, 7)  # This cell will be printed in red
-    board_file = "board0"
+    board_file = "board3"
     board = read_gomoku_board(board_file, board)
     draw_gomoku_board(board_size, board, highlight_coord)
     score = {"WHITE":0 , "BLACK": 0}
@@ -322,7 +319,8 @@ def main():
         if not (is_valid(x,y, board_size) and is_empty(x,y, board)):
             print("Invalid move !")
         else:
-            if check_free3(x, y, turn_is, copy.deepcopy(board), board_size):
+            #if check_free32(x, y, turn_is, copy.deepcopy(board), board_size):
+            if check_free3(x, y, turn_is, copy.deepcopy(board)):
                 # CHECK 2 free-three
                 print("Valid move !")
                 # CHECK CAPTURE
